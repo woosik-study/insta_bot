@@ -37,7 +37,7 @@ export async function claimNextApproved(): Promise<QueueRow | null> {
 
   const { data: claimed, error: claimError } = await db
     .from("reels_queue")
-    .update({ status: "publishing", updated_at: new Date().toISOString() })
+    .update({ status: "publishing", claimed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", next.id)
     .eq("status", "approved")
     .select("id, video_url, caption")

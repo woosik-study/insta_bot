@@ -1,5 +1,7 @@
+import { isAuthorizedCron } from "@/lib/auth/cron";
 import { serverEnv } from "@/lib/env/server";
 import { createReelContainer, getContainerStatus, publishContainer } from "@/lib/instagram/graph";
+import { recordRun } from "@/lib/ops/runs";
 import { publishNext } from "@/lib/reels/publish-next";
 import {
   claimNextApproved,
@@ -11,9 +13,9 @@ import {
 
 export const maxDuration = 300;
 
-// Vercel Cron sends `Authorization: Bearer $CRON_SECRET`.
 export async function GET(request: Request) {
-  if (request.headers.get("authorization") !== `Bearer ${serverEnv().CRON_SECRET}`) {
+  const authorization = request.headers.get("authorization"); // read first, see lib/auth/cron.ts
+  if (!isAuthorizedCron(authorization, serverEnv().CRON_SECRET)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -29,9 +31,12 @@ export async function GET(request: Request) {
       publish: publishContainer,
       sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
     });
+    await recordRun("reels-publish", result.status, result);
     return Response.json(result);
   } catch (e) {
     console.error("reels-publish failed", e);
-    return Response.json({ status: "failed", error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    // The error text goes to the run log for the monitor, not to the HTTP caller.
+    await recordRun("reels-publish", "failed", { error: e instanceof Error ? e.message : String(e) });
+    return Response.json({ status: "failed" }, { status: 500 });
   }
 }
