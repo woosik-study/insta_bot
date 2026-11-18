@@ -1,7 +1,13 @@
 import { serverEnv } from "@/lib/env/server";
 import { createReelContainer, getContainerStatus, publishContainer } from "@/lib/instagram/graph";
 import { publishNext } from "@/lib/reels/publish-next";
-import { claimNextApproved, markFailed, markPublished } from "@/lib/reels/queue";
+import {
+  claimNextApproved,
+  markFailed,
+  markNeedsReview,
+  markPublished,
+  reapStalePublishing,
+} from "@/lib/reels/queue";
 
 export const maxDuration = 300;
 
@@ -13,9 +19,11 @@ export async function GET(request: Request) {
 
   try {
     const result = await publishNext({
+      reapStale: reapStalePublishing,
       claimNext: claimNextApproved,
       markPublished,
       markFailed,
+      markNeedsReview,
       createContainer: (row) => createReelContainer(row.video_url, row.caption),
       getStatus: getContainerStatus,
       publish: publishContainer,
