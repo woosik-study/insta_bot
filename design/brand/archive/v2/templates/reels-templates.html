@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reels Templates</title>
+<!--
+  Brand templates for the daily vlog Reels account. Canvas: 1080x1920 (9:16).
+  Pick a template with the URL hash: #cover-text, #cover-photo, #subtitle, #safe-area.
+  Export: headless Chrome at --window-size=1080,1920, then convert PNG to JPEG for covers.
+  Edit the text inside the [data-edit] elements; do not change sizes or positions.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=block" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F2EEE6;   /* dominant */
+    --ink: #1F1D1A;     /* text */
+    --stone: #7A746A;   /* secondary text */
+    --mist: #D9D3C7;    /* rules, placeholders */
+    --persimmon: #C4562E; /* accent, one use per frame */
+    --u: 8px;           /* spacing base unit */
+    --serif: "Gowun Batang", serif;
+    --sans: "IBM Plex Sans KR", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  h1, p { word-break: keep-all; text-wrap: balance; } /* no split Korean words, no one-word widows */
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--paper); }
+  .frame { position: relative; width: 1080px; height: 1920px; display: none; overflow: hidden; }
+  .frame.on { display: block; }
+
+  /* shared pieces */
+  .stamp {
+    font: 500 32px/1 var(--sans); letter-spacing: 0.08em; color: var(--stone);
+    display: flex; align-items: center; gap: calc(var(--u) * 2);
+  }
+  .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--persimmon); }
+  .title { font: 700 112px/1.12 var(--serif); color: var(--ink); letter-spacing: -0.015em; }
+  .dek { font: 400 40px/1.3 var(--sans); color: var(--stone); }
+  .series { font: 500 28px/1 var(--sans); letter-spacing: 0.12em; color: var(--ink); }
+  .series b { color: var(--ink); font-weight: 600; }
+
+  /* video frame placeholder: replace with a real still when exporting */
+  .footage { position: absolute; inset: 0; background: #4A443D; }
+  .footage span {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font: 500 28px/1 var(--sans); letter-spacing: 0.2em; color: #8C8478;
+  }
+
+  /* 1. text-only cover */
+  #cover-text .stamp { position: absolute; left: 80px; top: 320px; }
+  #cover-text .rule { position: absolute; left: 80px; top: 392px; width: 840px; height: 2px; background: var(--mist); }
+  #cover-text .block { position: absolute; left: 80px; top: 720px; width: 840px; }
+  #cover-text .dek { margin-top: calc(var(--u) * 4); }
+  #cover-text .series { position: absolute; left: 80px; top: 1440px; }
+
+  /* 2. photo cover: full-bleed frame plus a paper label */
+  #cover-photo .label {
+    position: absolute; left: 80px; bottom: 440px; width: 760px;
+    background: var(--paper); padding: calc(var(--u) * 5) calc(var(--u) * 6);
+  }
+  #cover-photo .title { font-size: 80px; margin-top: calc(var(--u) * 3); }
+
+  /* 3. on-screen subtitle */
+  #subtitle .sub {
+    position: absolute; left: 80px; bottom: 480px; max-width: 840px;
+    background: var(--paper); padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  }
+  #subtitle .sub-en { font: 600 52px/1.3 var(--sans); color: var(--ink); }
+  #subtitle .sub-kr { font: 400 34px/1.4 var(--sans); color: var(--stone); margin-top: var(--u); }
+  #subtitle .stamp { position: absolute; left: 80px; top: 296px; color: var(--paper); }
+
+  /* 4. safe-area guide */
+  #safe-area { background: #4A443D; }
+  .zone { position: absolute; font: 500 26px/1.3 var(--sans); color: var(--ink); padding: 16px 24px; }
+  .z-ui { background: rgba(196, 86, 46, 0.55); color: #fff; }
+  .z-top { left: 0; top: 0; width: 1080px; height: 250px; }
+  .z-bottom { left: 0; top: 1500px; width: 1080px; height: 420px; display: flex; align-items: flex-end; }
+  .z-right { left: 920px; top: 250px; width: 160px; height: 1250px; padding-top: 64px; }
+  .z-crop { left: 0; top: 285px; width: 1080px; height: 1350px; border: 4px dashed var(--paper); color: var(--paper); display: flex; align-items: flex-end; }
+  .z-text { left: 80px; top: 296px; width: 840px; height: 1204px; border: 4px solid var(--paper); background: rgba(242, 238, 230, 0.12); color: var(--paper); }
+</style>
+</head>
+<body>
+
+<!-- 1. Text-only cover -->
+<section class="frame" id="cover-text">
+  <div class="stamp"><i class="dot"></i><span data-edit>2026.11.18 WED</span></div>
+  <div class="rule"></div>
+  <div class="block">
+    <h1 class="title" data-edit>A rainy day<br>at the studio</h1>
+    <p class="dek" data-edit>slow coffee, open windows</p>
+  </div>
+  <p class="series" data-edit>DAILY <b>042</b></p>
+</section>
+
+<!-- 2. Photo cover -->
+<section class="frame" id="cover-photo">
+  <div class="footage"><span>VIDEO FRAME</span></div>
+  <div class="label">
+    <div class="stamp"><i class="dot"></i><span data-edit>2026.11.18 WED</span></div>
+    <h1 class="title" data-edit>A rainy day<br>at the studio</h1>
+  </div>
+</section>
+
+<!-- 3. On-screen subtitle -->
+<section class="frame" id="subtitle">
+  <div class="footage"><span>VIDEO FRAME</span></div>
+  <div class="stamp"><span data-edit>07:42 AM</span></div>
+  <div class="sub">
+    <p class="sub-en" data-edit>windows open, coffee dripping</p>
+    <p class="sub-kr" data-edit>커피 내리는 동안 창문부터 연다</p>
+  </div>
+</section>
+
+<!-- 4. Safe-area guide -->
+<section class="frame" id="safe-area">
+  <div class="zone z-ui z-top">TOP UI 0-250</div>
+  <div class="zone z-ui z-bottom">BOTTOM UI 1500-1920<br>caption, audio, username</div>
+  <div class="zone z-ui z-right">RIGHT UI<br>920+</div>
+  <div class="zone z-crop">4:5 FEED CROP y 285-1635</div>
+  <div class="zone z-text" style="padding-top: 72px;">TEXT SAFE<br>x 80-920<br>y 296-1500</div>
+</section>
+
+<script>
+  const id = (location.hash || '#cover-text').slice(1);
+  (document.getElementById(id) || document.getElementById('cover-text')).classList.add('on');
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reels Templates v3</title>
+<!--
+  Brand templates v3 ("Loud text, real footage") for the daily vlog Reels account.
+  Canvas: 1080x1920 (9:16). Pick a template with the URL hash:
+  #cover-photo, #cover-text, #hook, #subtitle, #safe-area.
+  Export: headless Chrome at --window-size=1080,1920, then convert PNG to JPEG for covers.
+  Edit only the [data-edit] text. Wrap exactly one word per frame in <mark> for the Volt accent.
+  While the hook headline is on screen, the subtitle carries no <mark>.
+  Headline fit: at most 10 characters per line at 168 px (13 at 128 px); re-render and check nothing passes x 920.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Gothic+A1:wght@700;800;900&display=block" rel="stylesheet">
+<style>
+  :root {
+    --black: #0A0A0A;   /* dominant */
+    --white: #FFFFFF;   /* text */
+    --gray: #9A9A9A;    /* secondary labels */
+    --volt: #D4FF3A;    /* accent, exactly one word per frame */
+    --u: 8px;           /* spacing base unit */
+    --display: "Anton", sans-serif;
+    --text: "Gothic A1", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  h1, p { word-break: keep-all; text-wrap: balance; } /* no split Korean words, no one-word widows */
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--black); }
+  .frame { position: relative; width: 1080px; height: 1920px; display: none; overflow: hidden; }
+  .frame.on { display: block; }
+
+  /* video frame placeholder: replace with a real still when exporting */
+  .footage { position: absolute; inset: 0; background: #3B3B3B; }
+  .footage span {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font: 800 28px/1 var(--text); letter-spacing: 0.2em; color: #6E6E6E;
+  }
+  .scrim { position: absolute; inset: 0; background: rgba(10, 10, 10, 0.35); }
+
+  /* headline: Anton, uppercase, the accent word sits on a Volt block */
+  .headline { font: 400 168px/1.04 var(--display); color: var(--white); text-transform: uppercase; letter-spacing: 0.005em; }
+  .headline mark { display: inline-block; line-height: 0.9; background: var(--volt); color: var(--black); padding: calc(var(--u) * 1.5) calc(var(--u) * 2) calc(var(--u) * 1.5); vertical-align: top; } /* one word only, so inline-block is safe */
+  .tag { font: 900 32px/1 var(--text); letter-spacing: 0.14em; color: var(--white); text-transform: uppercase; }
+  .tag i { font-style: normal; color: var(--gray); }
+
+  /* 1. photo cover */
+  #cover-photo .tag { position: absolute; left: 80px; top: 320px; }
+  #cover-photo .headline { position: absolute; left: 80px; top: 400px; width: 840px; }
+
+  /* 2. text cover */
+  #cover-text .tag { position: absolute; left: 80px; top: 320px; }
+  #cover-text .headline { position: absolute; left: 80px; top: 400px; width: 840px; font-size: 200px; }
+  #cover-text .dek { position: absolute; left: 80px; top: 1340px; width: 840px; font: 800 44px/1.25 var(--text); color: var(--gray); }
+
+  /* 3. hook frame (0.0 to 2.0 s): headline on top, first subtitle below */
+  #hook .headline { position: absolute; left: 80px; top: 320px; width: 840px; font-size: 128px; }
+
+  /* subtitles: white heavy text with a black stroke, one keyword in Volt */
+  .sub { position: absolute; left: 80px; bottom: 500px; width: 840px; }
+  .sub-en, .sub-kr { color: var(--white); -webkit-text-stroke: 10px var(--black); paint-order: stroke fill; }
+  .sub-en { font: 900 68px/1.18 var(--text); }
+  .sub-en mark { background: none; color: var(--volt); }
+  .sub-kr { font: 800 42px/1.35 var(--text); margin-top: calc(var(--u) * 2); -webkit-text-stroke-width: 8px; }
+
+  /* 5. safe-area guide */
+  #safe-area { background: #3B3B3B; }
+  .zone { position: absolute; font: 800 26px/1.3 var(--text); color: var(--white); padding: 16px 24px; }
+  .z-ui { background: rgba(10, 10, 10, 0.7); }
+  .z-top { left: 0; top: 0; width: 1080px; height: 250px; }
+  .z-bottom { left: 0; top: 1500px; width: 1080px; height: 420px; display: flex; align-items: flex-end; }
+  .z-right { left: 920px; top: 250px; width: 160px; height: 1250px; padding-top: 64px; }
+  .z-crop { left: 0; top: 285px; width: 1080px; height: 1350px; border: 4px dashed var(--white); display: flex; align-items: flex-end; }
+  .z-text { left: 80px; top: 296px; width: 840px; height: 1204px; border: 4px solid var(--volt); color: var(--volt); padding-top: 72px; }
+</style>
+</head>
+<body>
+
+<!-- 1. Photo cover -->
+<section class="frame" id="cover-photo">
+  <div class="footage"><span>VIDEO FRAME</span></div>
+  <div class="scrim"></div>
+  <p class="tag" data-edit>DAY 042 <i>/ SEOUL</i></p>
+  <h1 class="headline" data-edit>I <mark>quit</mark> coffee for a week</h1>
+</section>
+
+<!-- 2. Text cover -->
+<section class="frame" id="cover-text">
+  <p class="tag" data-edit>DAY 042</p>
+  <h1 class="headline" data-edit>Worst <mark>rain</mark> day ever</h1>
+  <p class="dek" data-edit>studio flooded, shoot still happened</p>
+</section>
+
+<!-- 3. Hook frame -->
+<section class="frame" id="hook">
+  <div class="footage"><span>VIDEO FRAME</span></div>
+  <h1 class="headline" data-edit>I <mark>quit</mark> coffee for a week</h1>
+  <div class="sub">
+    <p class="sub-en" data-edit>day one, already regretting it</p>
+    <p class="sub-kr" data-edit>첫날인데 벌써 후회 중</p>
+  </div>
+</section>
+
+<!-- 4. Subtitle frame -->
+<section class="frame" id="subtitle">
+  <div class="footage"><span>VIDEO FRAME</span></div>
+  <div class="sub">
+    <p class="sub-en" data-edit>the studio is <mark>flooded</mark></p>
+    <p class="sub-kr" data-edit>작업실이 물에 잠겼다</p>
+  </div>
+</section>
+
+<!-- 5. Safe-area guide -->
+<section class="frame" id="safe-area">
+  <div class="zone z-ui z-top">TOP UI 0-250</div>
+  <div class="zone z-ui z-bottom">BOTTOM UI 1500-1920: caption, audio, username</div>
+  <div class="zone z-ui z-right">RIGHT UI<br>920+</div>
+  <div class="zone z-crop">4:5 FEED CROP y 285-1635</div>
+  <div class="zone z-text">TEXT SAFE<br>x 80-920<br>y 296-1500</div>
+</section>
+
+<script>
+  const id = (location.hash || '#cover-photo').slice(1);
+  (document.getElementById(id) || document.getElementById('cover-photo')).classList.add('on');
+</script>
+</body>
+</html>
