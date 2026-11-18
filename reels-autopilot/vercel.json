@@ -1,0 +1,3 @@
+{
+  "crons": [{ "path": "/api/cron/reels-publish", "schedule": "0 17 * * *" }]
+}

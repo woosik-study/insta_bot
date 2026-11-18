@@ -1,0 +1,175 @@
+{
+  "name": "Instagram Reels Auto Publish (Graph API)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "days", "triggerAtHour": 9 }] }
+      },
+      "name": "Daily 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "documentId": { "__rl": true, "mode": "id", "value": "YOUR_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "queue" },
+        "options": {}
+      },
+      "name": "Get Queue",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "pending",
+              "operator": { "type": "string", "operation": "empty", "singleValue": true },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Only Pending",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": { "maxItems": 1 },
+      "name": "One Per Run",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v27.0/YOUR_IG_USER_ID/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "media_type", "value": "REELS" },
+            { "name": "video_url", "value": "={{ $json.video_url }}" },
+            { "name": "caption", "value": "={{ $json.caption }}" },
+            { "name": "share_to_feed", "value": "true" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Create Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": { "amount": 60 },
+      "name": "Wait 60s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1100, 0],
+      "webhookId": "reels-wait-60s"
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.instagram.com/v27.0/{{ $('Create Container').item.json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [{ "name": "fields", "value": "status_code" }] },
+        "options": {}
+      },
+      "name": "Check Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2, "leftValue": "", "caseSensitive": true, "typeValidation": "strict" },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "in-progress",
+              "operator": { "type": "string", "operation": "equals" },
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "IN_PROGRESS"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Still Processing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1540, 0],
+      "notes": "ponytail: no retry cap. ERROR/EXPIRED falls through to Publish, which fails loudly. Add a counter if a container ever hangs IN_PROGRESS."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.instagram.com/v27.0/YOUR_IG_USER_ID/media_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [{ "name": "creation_id", "value": "={{ $('Create Container').item.json.id }}" }]
+        },
+        "options": {}
+      },
+      "name": "Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 100]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": { "__rl": true, "mode": "id", "value": "YOUR_SHEET_ID" },
+        "sheetName": { "__rl": true, "mode": "name", "value": "queue" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "video_url": "={{ $('One Per Run').item.json.video_url }}",
+            "status": "posted",
+            "media_id": "={{ $json.id }}"
+          },
+          "matchingColumns": ["video_url"],
+          "schema": []
+        },
+        "options": {}
+      },
+      "name": "Mark Posted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1980, 100]
+    }
+  ],
+  "connections": {
+    "Daily 9am": { "main": [[{ "node": "Get Queue", "type": "main", "index": 0 }]] },
+    "Get Queue": { "main": [[{ "node": "Only Pending", "type": "main", "index": 0 }]] },
+    "Only Pending": { "main": [[{ "node": "One Per Run", "type": "main", "index": 0 }]] },
+    "One Per Run": { "main": [[{ "node": "Create Container", "type": "main", "index": 0 }]] },
+    "Create Container": { "main": [[{ "node": "Wait 60s", "type": "main", "index": 0 }]] },
+    "Wait 60s": { "main": [[{ "node": "Check Status", "type": "main", "index": 0 }]] },
+    "Check Status": { "main": [[{ "node": "Still Processing?", "type": "main", "index": 0 }]] },
+    "Still Processing?": {
+      "main": [
+        [{ "node": "Wait 60s", "type": "main", "index": 0 }],
+        [{ "node": "Publish", "type": "main", "index": 0 }]
+      ]
+    },
+    "Publish": { "main": [[{ "node": "Mark Posted", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
