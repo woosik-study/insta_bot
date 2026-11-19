@@ -1,0 +1,27 @@
+{
+  "name": "reel-renderer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test src/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "track": "node scripts/make-track.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@remotion/cli": "^4.0.545",
+    "@remotion/google-fonts": "^4.0.545",
+    "image-size": "^2.1.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.545"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

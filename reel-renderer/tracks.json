@@ -1,0 +1,9 @@
+[
+  {
+    "id": "test-120",
+    "file": "tracks/test-120.wav",
+    "bpm": 120,
+    "firstBeatSec": 0,
+    "license": "synthetic test tone from scripts/make-track.mjs; not for publishing"
+  }
+]
