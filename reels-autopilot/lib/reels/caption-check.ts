@@ -1,9 +1,17 @@
 // Caption checks from the pre-approval checklist in design/brand/README.md (sections 4 to 6 and 8).
 // Thresholds live in brand-rules.ts. Pure so it runs under `node --test`.
-// Still needs a human: formula order, line lengths, the prompt cadence and the KST sign-off date.
+// Still needs a human: formula order, line lengths, the prompt cadence, and that line 1 matches the cover.
+// The sign-off date is checked against the post date only when `postAt` is given.
 // `findBannedTerms` must also run on the hook headline and the cover text (guide section 6).
 
-import { BANNED_HASHTAG_PREFIXES, BANNED_PHRASES, CAPTION, CONDITIONAL_CTA, PART_TWO } from "./brand-rules.ts";
+import {
+  BANNED_HASHTAG_PREFIXES,
+  BANNED_PHRASES,
+  CAPTION,
+  CONDITIONAL_CTA,
+  PART_TWO,
+  SIGN_OFF,
+} from "./brand-rules.ts";
 
 // `#` must not follow a word character or `/`, so "c#", "a#b" and URL fragments are not tags.
 // Digit-only tags like "#1" count too: unverified whether Instagram links them, so stay conservative on the cap.
@@ -16,12 +24,50 @@ const EMOJI = /(?![\u00A9\u00AE\u2122])\p{Extended_Pictographic}|\p{Regional_Ind
 const LINK = /https?:\/\/|\bwww\.|\b[a-z0-9-]+\.(com|co|net|org|io|ly|me|kr|gg|app|link|to|tv)(?![\p{L}\p{N}])/iu;
 // English only: any letter outside the Latin script (Hangul, kana, Cyrillic...) fails.
 const NON_LATIN_LETTER = /(?!\p{Script=Latin})\p{L}/u;
-// The sign-off tag is the only place all caps are allowed.
-const SIGN_OFF_TAG = /\bDAY \d{3}\b/g;
+// The sign-off tag (`DAY NNN` or `EP NN`) is the only place all caps are allowed.
+const TAGS = SIGN_OFF.tags.join("|");
+const SIGN_OFF_TAG = new RegExp(`\\b(?:${TAGS})\\b`, "g");
+// A whole line: tag, middle dot, YYYY.MM.DD. Placeholders such as "[date]" do not match.
+const SIGN_OFF_LINE = new RegExp(`^[^\\S\\n]*(${TAGS}) · (\\d{4})\\.(\\d{2})\\.(\\d{2})[^\\S\\n]*$`, "gm");
 // Two or more capitals not touching another letter: "LOVE", "OK", "11AM", "iPHONE". "I" and "TVs" pass.
 const ALL_CAPS_WORD = /(?<![\p{Lu}_#@])\p{Lu}{2,}(?![\p{L}])/gu;
 
-export type CaptionOptions = { partTwoExists?: boolean };
+// `postAt` is the row's `scheduled_at`. When given, the sign-off date must be its US calendar date.
+export type CaptionOptions = { partTwoExists?: boolean; postAt?: Date | string };
+
+// YYYY.MM.DD of an instant in one time zone.
+function dateIn(instant: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(instant)
+    .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return `${parts.year}.${parts.month}.${parts.day}`;
+}
+
+function isCalendarDate(y: number, m: number, d: number) {
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
+
+function checkSignOff(caption: string, postAt: Date | string | undefined): string[] {
+  const lines = [...caption.matchAll(SIGN_OFF_LINE)];
+  if (lines.length === 0) return ["no sign-off line like `DAY 042 · 2026.11.21` or `EP 02 · 2026.11.21`"];
+  if (lines.length > 1) return [`${lines.length} sign-off lines, need exactly 1`];
+  const [, , y, m, d] = lines[0];
+  if (!isCalendarDate(Number(y), Number(m), Number(d))) return [`sign-off date ${y}.${m}.${d} is not a real date`];
+  if (postAt === undefined) return [];
+
+  // A string without an offset would be read in the machine's local zone, so require Z, +hh, or +hh:mm
+  // (Postgres timestamptz text uses "+00").
+  if (typeof postAt === "string" && !/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\s*(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(postAt.trim())) {
+    return ["postAt needs a UTC offset (Z or +hh:mm)"];
+  }
+  const instant = new Date(postAt);
+  if (Number.isNaN(instant.getTime())) return ["postAt is not a valid date"];
+  const usDates = new Set(SIGN_OFF.usTimeZones.map((tz) => dateIn(instant, tz)));
+  if (usDates.size > 1) return [`post time ${instant.toISOString()} falls on different dates across US time zones`];
+  const [expected] = usDates;
+  return `${y}.${m}.${d}` === expected ? [] : [`sign-off date ${y}.${m}.${d} is not the US post date ${expected}`];
+}
 
 export type CaptionReport = {
   ok: boolean;
@@ -54,7 +100,10 @@ function conditionalRegex(phrase: string) {
 }
 
 const PHRASES = [
-  ...[...BANNED_PHRASES.bait, ...BANNED_PHRASES.hardCta].map((p) => ({ p, re: phraseRegex(p) })),
+  ...[...BANNED_PHRASES.bait, ...BANNED_PHRASES.hardCta, ...BANNED_PHRASES.realLife].map((p) => ({
+    p,
+    re: phraseRegex(p),
+  })),
   ...CONDITIONAL_CTA.phrases.map((p) => ({ p, re: conditionalRegex(p) })),
 ];
 
@@ -93,11 +142,15 @@ export function checkCaption(caption: string, options: CaptionOptions = {}): Cap
   const nonLatin = caption.match(NON_LATIN_LETTER);
   if (nonLatin) errors.push(`not English only (${nonLatin[0]})`);
 
-  const caps = caption.replace(SIGN_OFF_TAG, "").replace(HASHTAG, "").match(ALL_CAPS_WORD);
+  // Only the tag on a real sign-off line is exempt; "EP 02" in the body still counts as all caps.
+  const withoutSignOff = caption.replace(SIGN_OFF_LINE, (line) => line.replace(SIGN_OFF_TAG, ""));
+  const caps = withoutSignOff.replace(HASHTAG, "").match(ALL_CAPS_WORD);
   if (caps) errors.push(`all-caps words outside the sign-off: ${caps.join(" ")}`);
 
   const banned = findBannedTerms(caption, options);
   if (banned.length) errors.push(`banned terms: ${banned.join(", ")}`);
+
+  errors.push(...checkSignOff(caption, options.postAt));
 
   return { ok: errors.length === 0, errors, length, hashtags, mentions };
 }

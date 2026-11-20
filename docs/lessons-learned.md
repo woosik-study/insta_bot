@@ -13,6 +13,33 @@ Source of truth for content rules: `design/brand/README.md`. Approved version: v
 
 ## Attempt log
 
+### L-021 Validators updated to brand guide v4.2
+- Date: 2026-11-19
+- What was tried: woosik approved guide v4.1, then v4.2 (README status line). Set `GUIDE_VERSION` to v4.2. Added the real-life claim phrases (`real footage`, `caught on camera`, `true story`, `actually happened`) and the banned hashtag prefixes `#reallife`, `#realfootage`, `#caughtoncamera`, `#truestory`, `#actuallyhappened`. Added a sign-off check: exactly one line `DAY NNN · YYYY.MM.DD` or `EP NN · YYYY.MM.DD` with a real calendar date; with `postAt` (the row's `scheduled_at`, which must carry a UTC offset) the date must be the US calendar date, computed in Pacific/Honolulu and America/New_York. The all-caps exception covers only the tag on the sign-off line. The guide's v4.1 caption example and the Rudy episode 1 draft are test cases. The v4.1 Volt rule and the v4.2 render rules (frame-0 `EP NN` tag, allowed moves, at most 4 sound effects, no word-by-word highlighting) are listed in `brand-rules.ts` as manual step 7 checks.
+- Result: pass on the first run (57 of 57). A fresh review then found 6 risks and 1 question, 0 blocking. Fixed 5: an offset-less `postAt` string was read in the machine's local zone; any `DAY NNN` or `EP NN` in the body was exempt from all caps; the comment claimed one date fits every US zone (false for Guam and the CNMI, UTC+10); hashtag forms of the real-life phrases passed; a test checked only an error count. The first fix runs failed 3 times: the offset pattern missed Postgres's `+00` form, then read the `-21` in a bare `2026-11-21` as an offset, and the invalid-date test now hits the offset error first. Final: `node --test` 57 of 57, `tsc` no new errors, ESLint clean on `lib/reels`.
+- Root cause: dates crossed time zones again (L-002), and a format check written as a suffix match matched the date itself.
+- Rule: a timestamp string must carry its offset, and the offset pattern must sit after a time, not just at the end of the string. A rule's exception applies only where the guide puts it (the sign-off line), not anywhere the token appears. Name the zones a date rule covers.
+- Not fixed, owned elsewhere: no caller runs `checkCaption` yet, so the sign-off date rule never runs in the pipeline (Engineering: call it at approval with `postAt: row.scheduled_at`). Asked Design: whether bare "real" is banned (guide section 4 lists it, section 6 does not), and to scope "every US time zone" in section 4 to the 50 states.
+- Design answered both questions on 2026-11-19 (guide section 4): bare "real" stays a human check at approval, not a machine ban, because it would block "real estate", "for real" and "real quick"; the date claim is scoped to the 50 states. No code change.
+- Status: resolved for QA's code; open only for the Engineering wiring. Closes L-020.
+
+### L-020 Brand guide v4 draft: validator changes deferred
+- Date: 2026-11-19
+- What was tried: Design Team asked for v4 validator changes: real-life banned terms (`real footage`, `caught on camera`, `true story`, `actually happened`, `#reallife`), an `EP NN` all-caps exception, and a sign-off with the post date in US time. The guide status reads "DRAFT v4, pending Design Review and woosik's approval".
+- Result: deferred. woosik chose "apply after approval" on 2026-11-19.
+- Root cause: n/a.
+- Rule: same as L-014. When v4 is approved, bump `GUIDE_VERSION`, add the terms and the `EP NN` exception, and add the sign-off format and date check (closes the L-019 gap), with tests and a fresh review. Subtitle timing and hook repeats are not validator checks; QA's manual step 7 check follows the approved guide.
+- Added 2026-11-19 from Design Review (guide now draft v4.1): the sign-off check accepts `EP NN · YYYY.MM.DD` as well as `DAY NNN · YYYY.MM.DD`; the Volt rule becomes exactly one Volt word on frame 0 and the cover, and at most one on any other frame, which settles the L-019 conflict; L-002 (KST shoot date) is marked superseded by the US post date rule.
+- Status: resolved 2026-11-19 by L-021 (v4.1 and v4.2 approved and applied).
+
+### L-019 Pipeline step 7 first check: Rudy episode 1 test reel
+- Date: 2026-11-19
+- What was tried: first QA check on `reel-renderer/out/c2-rudy-ep1.mp4` (main checkout), the first end-to-end pipeline test (`docs/team.md` section 3.1). Ran `checkVideo` on JSON from the bundled `npx remotion ffprobe` (system ffprobe is still missing, L-006) with a placeholder https URL, `checkCaption` on the draft in `docs/production/example-2-rudy-script.md` section 3, and `findBannedTerms` on the headline and the 7 narration lines. Read scene and caption timings from `reel-renderer/out/spec.json` (written 21 s before the MP4). Extracted 17 frames with `npx remotion ffmpeg` to the session scratchpad, overlaid the text-safe box with Pillow, and measured text bounds and Volt pixels.
+- Result: file, caption, headline, safe area and banned terms pass. Not publishable: the music is `tracks/test-120.wav` (team rule 9), the sign-off date is the `[date]` placeholder with no rule for a generated character, and it is unverified that the publisher can set the AI label (team rule 11). Two source conflicts: the guide's "exactly one Volt word per frame" and "English over Korean" subtitles versus `docs/photo-reel-concept.md`, whose story captions carry no Volt word and no Korean line, so all 13 sampled frames that show only a story caption have no Volt word. Lines 6 and 7 play over image 08, a copy of 01 (known in script v1). Audio was not checked: QA cannot listen.
+- Root cause: QA gap found: `checkCaption` passed a caption whose sign-off is the literal `[date]`, because it does not check the sign-off format. Also, the bundled ffmpeg has no `drawbox` filter, and `select=eq(n\,N)` broke through `npx` quoting; seeking with `-ss` after `-i` and drawing with Pillow worked.
+- Rule: check the sign-off line format (`DAY NNN · YYYY.MM.DD`, with a real date) before a caption passes; fix only with woosik's yes. For frame checks, use the bundled `npx remotion ffprobe` and `ffmpeg` with `-ss` seeks, draw overlays in Python, and write only to the scratchpad. A frame check needs the render spec next to the MP4; confirm its timestamp matches.
+- Status: open (three publish blockers). Guide v4.1 settled the Volt conflict on 2026-11-19: story subtitles may carry no Volt word. The Korean line is not settled: v4.1 section 1 still asks for English over Korean in story mode, while `docs/photo-reel-concept.md` and the Rudy render are English only. The sign-off gap is closed by L-021.
+
 ### L-018 Conditional CTA ruling applied
 - Date: 2026-11-18
 - What was tried: Design Team ruled on L-017: keep the literal rule (a line that opens with `like this` or `save this` is CTA form), change the guide example to "I want to save this moment", and treat the end of a line like end punctuation. Added the end-of-line case (trailing spaces allowed) to the conditional regex, and test cases for "save this moment" at line start, "like this" before a line break, and "like this" with trailing spaces.
@@ -120,7 +147,7 @@ Source of truth for content rules: `design/brand/README.md`. Approved version: v
 - Result: fail. `ffprobe not found`, `ffmpeg not found`. Homebrew is available at `/opt/homebrew/bin/brew`.
 - Root cause: tools were never installed.
 - Rule: do not assume ffprobe exists. Ask woosik before installing anything (`brew install ffmpeg` installs both). Unit tests must not depend on the binary.
-- Status: open
+- Status: resolved 2026-11-19. With woosik's yes, `brew install ffmpeg` installed ffmpeg and ffprobe 9.0.2 at `/opt/homebrew/bin`; this build has the `drawbox` filter that Remotion's bundled ffmpeg lacks (L-019). System ffprobe on `reel-renderer/out/c2-rudy-ep1.mp4` gives the same format, duration (22.507 s) and size (10,206,921 bytes) as the bundled one, and `checkVideo` passes on it. `probeVideo` itself is still untested: it needs a public https video URL.
 
 ### L-005 Agent spec conflicted with the brand guide
 - Date: 2026-11-18
@@ -151,8 +178,9 @@ Source of truth for content rules: `design/brand/README.md`. Approved version: v
 - What was tried: caption sign-off used the post date.
 - Result: bad outcome. The cron posts at 17:00 UTC, which is 02:00 KST the next day, so dates were wrong.
 - Root cause: mixing the UTC post time with the KST shoot day.
-- Rule: the sign-off date is the shoot date in Asia/Seoul. Never derive it from `scheduled_at` or the post time.
-- Status: resolved (rule in the brand guide)
+- Rule (superseded 2026-11-19): the sign-off date was the shoot date in Asia/Seoul.
+- Current rule (guide v4.1 section 4): the content is AI-generated, so there is no shoot date. The sign-off date is the post date in US time, which is the calendar date of `scheduled_at` (the cron posts at 17:00 UTC, the same date in every US zone). `checkCaption` checks it when given `postAt`, but no pipeline code calls it yet (L-021). One date fits the 50 states, not Guam or the CNMI. The lesson that survives: never mix time zones; name the zone a date is in.
+- Status: superseded by guide v4.1; enforced in code since L-021.
 
 ### L-001 Designed covers never reach Instagram
 - Date: 2026-11-18

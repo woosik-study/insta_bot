@@ -2,7 +2,7 @@
 // Source: design/brand/README.md. When the guide changes version, update this file first,
 // then re-read docs/lessons-learned.md (L-014).
 
-export const GUIDE_VERSION = "v3.1 (2026-11-18)";
+export const GUIDE_VERSION = "v4.2 (2026-11-19)";
 
 export const CAPTION = {
   // Sections 4 and 8: the length target is a checklist item, so it fails approval.
@@ -28,6 +28,18 @@ export const BANNED_PHRASES = {
     "comment below",
     "subscribe",
   ],
+  // New in v4: the content is generated, so nothing may claim it is real.
+  realLife: ["real footage", "caught on camera", "true story", "actually happened"],
+} as const;
+
+// Section 4: the sign-off is the cover tag, then the post date in US time.
+// `DAY NNN` counts every post; a series episode shows `EP NN` in its place.
+export const SIGN_OFF = {
+  tags: ["DAY \\d{3}", "EP \\d{2}"],
+  // The cron posts at 17:00 UTC, which is one calendar date across the 50 states (not Guam or the
+  // CNMI, UTC+10, where it is already the next day). Checked at the two ends of the 50 states:
+  // Hawaii (UTC-10) and the East Coast (UTC-5 or -4). Alaska and Puerto Rico fall between them.
+  usTimeZones: ["Pacific/Honolulu", "America/New_York"],
 } as const;
 
 // Section 6 "Conditional CTA": banned only in CTA form, meaning at the start of a line, or followed
@@ -42,7 +54,25 @@ export const CONDITIONAL_CTA = {
 // "part 2" is allowed only when a part 2 exists.
 export const PART_TWO = "part 2";
 
-export const BANNED_HASHTAG_PREFIXES = ["#fyp", "#viral", "#explore", "#reels", "#foryou"] as const;
+export const BANNED_HASHTAG_PREFIXES = [
+  "#fyp",
+  "#viral",
+  "#explore",
+  "#reels",
+  "#foryou",
+  "#reallife",
+  // Section 5 bans "any tag that claims the content is real": the hashtag forms of the section 6 phrases.
+  "#realfootage",
+  "#caughtoncamera",
+  "#truestory",
+  "#actuallyhappened",
+] as const;
+
+// Not checked in code (render-level, QA checks frames and the render spec at step 7):
+// - exactly one Volt word on frame 0 and the cover, at most one on any other frame; story subtitles may carry none;
+// - v4.2: a series tag `EP NN` shows from frame 0 while the headline is up, and again on the close;
+// - v4.2: moves are push-in, pull-out, drift (1.06, at most 2% sideways) or crop cuts, never the same move
+//   on more than 2 images in a row; at most 4 sound effects; no word-by-word color highlighting.
 
 export const VIDEO = {
   // Section 8 (Graph API limits).

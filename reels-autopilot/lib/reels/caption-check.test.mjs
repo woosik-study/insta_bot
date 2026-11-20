@@ -2,27 +2,30 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { checkCaption, findBannedTerms } from "./caption-check.ts";
 
-// The example from design/brand/README.md v3.1 section 4.
-const GOOD = `I quit coffee for a week
+// The example from design/brand/README.md v4.1 section 4, word for word.
+const GOOD = `Raccoon vs the roommate
 
-day one: headache by 11am.
-day four: weirdly fine?
-day seven: not going back. maybe.
+rudy's plan: find a roommate.
+four interviews. one drum kit. one snake named rudy.
+he found the one. there is a catch.
 
-could you last a week without it?
+what was your worst roommate interview?
 
-DAY 042 · 2026.11.18
+EP 02 · 2026.11.21
 
-#dayinmylife #dailyvlog #nocoffee #challenge`;
+#storytime #roommates #roommatelife`;
 
 const TAGS = "#dayinmylife #dailyvlog #nocoffee";
-// Body text that pads a caption to `n` characters, ending in the three tags.
-const pad = (n, body = "a") => body + "a".repeat(n - body.length - TAGS.length - 1) + " " + TAGS;
+const SIGN = "DAY 042 · 2026.11.21";
+// Body text padded to `n` characters, then a valid sign-off line and the three tags.
+const pad = (n, body = "a") =>
+  body + "a".repeat(n - body.length - SIGN.length - TAGS.length - 2) + "\n" + SIGN + "\n" + TAGS;
 const errorsFor = (text, opts) => checkCaption(text, opts).errors;
 
 test("the brand guide example passes", () => {
   assert.deepEqual(errorsFor(GOOD), []);
-  assert.deepEqual(checkCaption(GOOD).hashtags, ["#dayinmylife", "#dailyvlog", "#nocoffee", "#challenge"]);
+  assert.deepEqual(errorsFor(GOOD, { postAt: "2026-11-21T17:00:00Z" }), []);
+  assert.deepEqual(checkCaption(GOOD).hashtags, ["#storytime", "#roommates", "#roommatelife"]);
 });
 
 test("150 to 500 characters", () => {
@@ -37,7 +40,7 @@ test("length counts code points, so Korean and the middle dot count once each", 
 });
 
 test("hashtags must be 3 to 5 unique, lowercase", () => {
-  const withTags = (tags) => "a".repeat(200) + " " + tags;
+  const withTags = (tags) => "a".repeat(200) + "\n" + SIGN + "\n" + tags;
   assert.match(errorsFor(withTags("#a #b"))[0], /2 unique hashtags/);
   assert.deepEqual(errorsFor(withTags("#a #b #c")), []);
   assert.deepEqual(errorsFor(withTags("#a #b #c #d #e")), []);
@@ -80,12 +83,16 @@ test("English only: non-Latin letters fail in the body and in hashtags", () => {
   assert.deepEqual(errorsFor(pad(200, "café naïve ")), []);
 });
 
-test("all-caps words fail except the DAY NNN sign-off", () => {
+test("all-caps words fail except the DAY NNN and EP NN sign-off tags", () => {
   assert.match(errorsFor(pad(200, "this was SO good "))[0], /all-caps words outside the sign-off: SO/);
   assert.match(errorsFor(pad(200, "DAY one "))[0], /: DAY/);
   assert.match(errorsFor(pad(200, "up at 11AM and 3AM "))[0], /: AM AM/);
   assert.match(errorsFor(pad(200, "new iPHONE "))[0], /: PHONE/);
-  assert.deepEqual(errorsFor(pad(200, "DAY 042 · I got 2 TVs ")), []);
+  assert.deepEqual(errorsFor(pad(200, "I got 2 TVs ")), []);
+  // The tags are exempt only on the sign-off line itself.
+  assert.match(errorsFor(pad(200, "this is EP 02 of it "))[0], /: EP/);
+  assert.match(errorsFor(pad(200, "DAY 042 again "))[0], /: DAY/);
+  assert.match(errorsFor(pad(200, "EP two "))[0], /: EP/);
 });
 
 test("banned phrases match whole words, case-insensitive", () => {
@@ -159,5 +166,82 @@ test("banned hashtags match by prefix", () => {
 });
 
 test("reports every failure at once", () => {
-  assert.equal(errorsFor("x".repeat(2300) + " ☕ LOUD").length, 4);
+  // Length, hashtags, emoji, all caps, sign-off.
+  assert.equal(errorsFor("x".repeat(2300) + " ☕ LOUD").length, 5);
+});
+
+test("real-life claims are banned (v4)", () => {
+  for (const [text, term] of [
+    ["Real footage from today", "real footage"],
+    ["caught   on camera", "caught on camera"],
+    ["a TRUE STORY.", "true story"],
+    ["this actually happened", "actually happened"],
+    ["#reallife", "#reallife"],
+    ["#RealLifeStory", "#RealLifeStory"],
+    ["#truestory", "#truestory"],
+    ["#caughtoncamera", "#caughtoncamera"],
+  ]) {
+    assert.deepEqual(findBannedTerms(text), [term], text);
+  }
+  for (const text of ["really happened", "a true storyline", "unreal footage", "#real", "the camera caught it"]) {
+    assert.deepEqual(findBannedTerms(text), [], text);
+  }
+});
+
+test("sign-off must be one DAY NNN or EP NN line with a real YYYY.MM.DD date", () => {
+  const withSign = (line) => "a".repeat(150) + "\n" + line + "\n" + TAGS;
+  for (const ok of ["DAY 042 · 2026.11.21", "EP 02 · 2026.11.21", "  EP 12 · 2027.01.01  "]) {
+    assert.deepEqual(errorsFor(withSign(ok)), [], ok);
+  }
+  for (const [line, why] of [
+    ["DAY 001 · [date]", /no sign-off line/],
+    ["DAY 42 · 2026.11.21", /no sign-off line/],
+    ["EP 2 · 2026.11.21", /no sign-off line/],
+    ["DAY 042 - 2026.11.21", /no sign-off line/],
+    ["DAY 042 · 2026-11-21", /no sign-off line/],
+    ["DAY 042 · 2026.11.21 / RUDY", /no sign-off line/],
+    ["DAY 042 · 2026.02.30", /not a real date/],
+    ["DAY 042 · 2026.11.21\nEP 02 · 2026.11.21", /2 sign-off lines/],
+  ]) {
+    assert.ok(errorsFor(withSign(line)).some((m) => why.test(m)), line);
+  }
+});
+
+test("with postAt, the sign-off date must be the US post date", () => {
+  // 17:00 UTC is 07:00 in Honolulu and 12:00 in New York: one date.
+  assert.deepEqual(errorsFor(GOOD, { postAt: new Date("2026-11-21T17:00:00Z") }), []);
+  assert.match(errorsFor(GOOD, { postAt: "2026-11-22T17:00:00Z" })[0], /not the US post date 2026.11.22/);
+  // The Korean date is wrong: 2026-11-21 17:00 UTC is 11-22 02:00 KST but 11-21 in the US.
+  assert.match(
+    errorsFor(GOOD.replace("2026.11.21", "2026.11.22"), { postAt: "2026-11-21T17:00:00Z" })[0],
+    /not the US post date 2026\.11\.21/,
+  );
+  // Supabase timestamptz strings carry an offset; strings without one are refused.
+  assert.deepEqual(errorsFor(GOOD, { postAt: "2026-11-21T17:00:00+00:00" }), []);
+  assert.deepEqual(errorsFor(GOOD, { postAt: "2026-11-21 17:00:00+00" }), []);
+  for (const bare of ["2026-11-21 17:00:00", "2026-11-21"]) {
+    assert.match(errorsFor(GOOD, { postAt: bare })[0], /needs a UTC offset/, bare);
+  }
+  // 08:00 UTC is 22:00 the day before in Honolulu but 03:00 in New York.
+  assert.match(errorsFor(GOOD, { postAt: "2026-11-21T08:00:00Z" })[0], /different dates across US time zones/);
+  assert.match(errorsFor(GOOD, { postAt: "not a date" })[0], /needs a UTC offset/);
+  assert.match(errorsFor(GOOD, { postAt: "2026-13-45T99:00:00Z" })[0], /postAt is not a valid date/);
+});
+
+test("the Rudy episode 1 draft fails on its date placeholder (L-019)", () => {
+  const draft = `Raccoon vs the rent
+
+rudy just moved to new york with one suitcase.
+three apartments. one has a shower in the kitchen.
+he has a plan. mostly.
+
+DAY 001 · [date]
+
+#storytime #nycapartment #apartmenthunt`;
+  // The placeholder line is not a sign-off, so its DAY tag also counts as an all-caps word.
+  const errors = errorsFor(draft);
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((m) => /no sign-off line/.test(m)));
+  assert.ok(errors.some((m) => /all-caps words outside the sign-off: DAY/.test(m)));
+  assert.deepEqual(errorsFor(draft.replace("DAY 001 · [date]", "EP 01 · 2026.11.21")), []);
 });
