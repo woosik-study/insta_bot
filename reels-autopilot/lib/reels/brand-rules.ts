@@ -36,10 +36,10 @@ export const BANNED_PHRASES = {
 // `DAY NNN` counts every post; a series episode shows `EP NN` in its place.
 export const SIGN_OFF = {
   tags: ["DAY \\d{3}", "EP \\d{2}"],
-  // The cron posts at 17:00 UTC, which is one calendar date across the 50 states (not Guam or the
-  // CNMI, UTC+10, where it is already the next day). Checked at the two ends of the 50 states:
-  // Hawaii (UTC-10) and the East Coast (UTC-5 or -4). Alaska and Puerto Rico fall between them.
-  usTimeZones: ["Pacific/Honolulu", "America/New_York"],
+  // Guide section 4 (woosik, 2026-11-19): the reference date is the calendar date in California time,
+  // America/Los_Angeles. One zone gives one answer at any hour, including manual runs when US zones
+  // are on different dates (L-023). At the 17:00 UTC slot every one of the 50 states agrees.
+  referenceTimeZone: "America/Los_Angeles",
 } as const;
 
 // Section 6 "Conditional CTA": banned only in CTA form, meaning at the start of a line, or followed
