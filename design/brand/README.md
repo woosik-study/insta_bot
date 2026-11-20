@@ -163,8 +163,8 @@ he found the one. there is a catch.
 
 - Line 1 is the cover headline in sentence case, word for word. It must work alone in the one-line feed preview.
 - Body lines are short. Lowercase is fine. Each line is at most 60 characters. Do not reveal a story's turn.
-- Sign-off: the cover tag (`EP NN` or `DAY NNN`), then the **post date in US time** (woosik, 2026-11-19). The cron posts at 17:00 UTC, which is 07:00 to 13:00 on the same calendar day in every US time zone, so one date fits all of them.
-- Never describe generated scenes as real ("real", "actually happened", "caught on camera"). Characters and places are fiction.
+- Sign-off: the cover tag (`EP NN` or `DAY NNN`), then the **post date in US time** (woosik, 2026-11-19). The cron posts at 17:00 UTC, which is 07:00 to 13:00 on the same calendar day in all 50 states (Hawaii to the East Coast), so one date fits all of them. US territories west of the date line (Guam, the Northern Mariana Islands) are already on the next day and are out of scope.
+- Never describe generated scenes as real. Characters and places are fiction. The machine check covers the phrases in section 6; bare "real" is not banned by the machine check (it would block "real estate" and "for real"), so claims such as "this is real" are a human check at approval.
 - No emojis, no links, no all-caps words outside the sign-off tag.
 
 ## 5. CTA and hashtags
