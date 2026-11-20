@@ -43,6 +43,11 @@ function dateIn(instant: Date, timeZone: string) {
   return `${parts.year}.${parts.month}.${parts.day}`;
 }
 
+// The sign-off date for a post at `instant`: YYYY.MM.DD in the guide's reference zone (California).
+export function usPostDate(instant: Date): string {
+  return dateIn(instant, SIGN_OFF.referenceTimeZone);
+}
+
 function isCalendarDate(y: number, m: number, d: number) {
   const t = new Date(Date.UTC(y, m - 1, d));
   return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
@@ -63,9 +68,7 @@ function checkSignOff(caption: string, postAt: Date | string | undefined): strin
   }
   const instant = new Date(postAt);
   if (Number.isNaN(instant.getTime())) return ["postAt is not a valid date"];
-  const usDates = new Set(SIGN_OFF.usTimeZones.map((tz) => dateIn(instant, tz)));
-  if (usDates.size > 1) return [`post time ${instant.toISOString()} falls on different dates across US time zones`];
-  const [expected] = usDates;
+  const expected = usPostDate(instant);
   return `${y}.${m}.${d}` === expected ? [] : [`sign-off date ${y}.${m}.${d} is not the US post date ${expected}`];
 }
 

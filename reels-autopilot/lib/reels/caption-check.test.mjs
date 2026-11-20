@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkCaption, findBannedTerms } from "./caption-check.ts";
+import { checkCaption, findBannedTerms, usPostDate } from "./caption-check.ts";
 
 // The example from design/brand/README.md v4.1 section 4, word for word.
 const GOOD = `Raccoon vs the roommate
@@ -208,7 +208,7 @@ test("sign-off must be one DAY NNN or EP NN line with a real YYYY.MM.DD date", (
 });
 
 test("with postAt, the sign-off date must be the US post date", () => {
-  // 17:00 UTC is 07:00 in Honolulu and 12:00 in New York: one date.
+  // 17:00 UTC is 09:00 in Los Angeles (and 07:00 in Honolulu, 12:00 in New York): one date.
   assert.deepEqual(errorsFor(GOOD, { postAt: new Date("2026-11-21T17:00:00Z") }), []);
   assert.match(errorsFor(GOOD, { postAt: "2026-11-22T17:00:00Z" })[0], /not the US post date 2026.11.22/);
   // The Korean date is wrong: 2026-11-21 17:00 UTC is 11-22 02:00 KST but 11-21 in the US.
@@ -222,8 +222,16 @@ test("with postAt, the sign-off date must be the US post date", () => {
   for (const bare of ["2026-11-21 17:00:00", "2026-11-21"]) {
     assert.match(errorsFor(GOOD, { postAt: bare })[0], /needs a UTC offset/, bare);
   }
-  // 08:00 UTC is 22:00 the day before in Honolulu but 03:00 in New York.
-  assert.match(errorsFor(GOOD, { postAt: "2026-11-21T08:00:00Z" })[0], /different dates across US time zones/);
+  // One reference zone, California (guide section 4, L-023): any run time has one answer.
+  // Los Angeles midnight decides: in November (PST, UTC-8) 07:59 UTC is still 11-20, 08:00 UTC is 11-21.
+  assert.match(errorsFor(GOOD, { postAt: "2026-11-21T07:59:00Z" })[0], /not the US post date 2026\.11\.20/);
+  assert.deepEqual(errorsFor(GOOD, { postAt: "2026-11-21T08:00:00Z" }), []);
+  // A late manual run the next morning in Korea (01:00 UTC on 11-22) is still 11-21 in California.
+  assert.deepEqual(errorsFor(GOOD, { postAt: "2026-11-22T01:00:00Z" }), []);
+  // Daylight time: in July Los Angeles is UTC-7, so 07:00 UTC is already the new day.
+  const july = GOOD.replace("2026.11.21", "2026.07.01");
+  assert.deepEqual(errorsFor(july, { postAt: "2026-07-01T07:00:00Z" }), []);
+  assert.equal(usPostDate(new Date("2026-07-01T06:59:00Z")), "2026.06.30");
   assert.match(errorsFor(GOOD, { postAt: "not a date" })[0], /needs a UTC offset/);
   assert.match(errorsFor(GOOD, { postAt: "2026-13-45T99:00:00Z" })[0], /postAt is not a valid date/);
 });
