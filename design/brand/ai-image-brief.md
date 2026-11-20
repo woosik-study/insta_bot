@@ -41,7 +41,7 @@ Brightness, measured as the mean of the grayscale image (PIL `convert("L")`, 0 t
 
 ## 3. Composition zones (1080x1920)
 
-Text is drawn in fixed places (guide section 1 and `reel-renderer/src/PhotoReel.tsx`). The renderer pushes in to 1.08 from the centre on every image. In story mode it also cuts to tighter crops of the same image, about the centre, in steps of 1.2 up to 2 (`CROP_STEP`, `MAX_ZOOM` in `reel-renderer/src/spec.ts`), whenever an image would hold longer than 2 s in the first 6 s. A source point at y lands at 960 + (y - 960) x zoom x 1.08 on screen.
+Text is drawn in fixed places (guide section 1 and `reel-renderer/src/PhotoReel.tsx`). The renderer pushes in to 1.08 on every image (or uses an allowed move, guide section 3). In story mode it also cuts to tighter crops of the same image in steps of 1.2, 1.44 and 1.73 (1.73 x 1.08 = 1.87 at most), and limits the crop to 1.44 for images that must be enlarged. With a face box (`faceBox` in the renderer's image info) the crop scales about the face centre; without one, about the frame centre. The numbers below assume the frame centre, which is the stricter case: a source point at y lands at 960 + (y - 960) x zoom x 1.08 on screen.
 
 | Zone | Pixels | Rule |
 | --- | --- | --- |
@@ -58,13 +58,13 @@ Text is drawn in fixed places (guide section 1 and `reel-renderer/src/PhotoReel.
 | --- | --- |
 | Every image | The character is at least 25% of frame height (480 px). In at least 75% of the images in a reel it is 40% or more (770 px), head to toe or as much of the body as the shot shows. |
 | Opening image | Medium shot. Face box inside y 640 to 1060 (below the headline, above the crop limit) and inside x 300 to 780. |
-| Images that may get crop cuts: every image in the first 6 s, and any image whose script line has 2 or more sentences (the sentence punch-in, `docs/editing/playbook.md` section 3) | Face box, hands and story action inside y 640 to 1060 and x 300 to 780 (y 640 renders at 269, below Instagram's top UI). At the 2.16 maximum crop the visible source is x 290 to 790, y 516 to 1404, and y 1060 lands at y 1176, just above the subtitles at 1180. |
+| Images that may get crop cuts: every image in the first 6 s, and any image whose script line has 2 or more sentences (the sentence punch-in, `docs/editing/playbook.md` section 3) | Face box, hands and story action inside y 640 to 1060 and x 300 to 780 (y 640 renders at 269, below Instagram's top UI). At the 1.87 maximum crop the visible source is x 251 to 829, y 446 to 1474, and y 1060 lands at y 1147, above the subtitles at 1180. |
 | All other images (moves only, no crop cuts) | Face box, hands and story action inside y 80 to 1130 (1130 lands at 1144 at 1.08). |
 | Any image | Nothing important right of x 900, where the like and share buttons sit. |
 
 The fix is to keep the face, hands and action high, not to shrink the character: legs and feet may run through the subtitle band and off the bottom edge.
 
-Safety net, requested from Engineering: the planner skips any crop cut that would put the face box below rendered y 1176 or off the frame at that zoom, so an image that misses these limits loses the crop instead of hiding the face.
+Safety net, built by Engineering (2026-11-19): with a `faceBox` for the image, the planner skips any crop cut that would put the face box below rendered y 1176 or off the frame at that zoom, so an image that misses these limits loses the crop instead of hiding the face.
 
 If a scene cannot meet these numbers, tell Production before generating. Do not move text to fit the image.
 
